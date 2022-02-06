@@ -46,13 +46,14 @@ class game:
         self.movable = []
         self.attackable = []
         self.dead_piece = [[], []]
+        self.promotion = [0, -1]
         for idx, v in enumerate([2, 4, 3, 1, 0, 3, 4, 2]):
             self.board[idx][0] = [2, v] #minor piece
             self.board[idx][7] = [1, v]
             self.board[idx][1] = [2, 5] #pawn
             self.board[idx][6] = [1, 5]
-        self.board[5][5] = [2, 0]
-        self.board[3][3] = [1, 1]
+        self.board[2][2] = [1, 5]
+        self.board[5][5] = [2, 5]
     def run(self):
         #Mouse
         self.mouse_pos = pg.mouse.get_pos()
@@ -63,16 +64,24 @@ class game:
         if pg.mouse.get_pressed()[0] == True:
             if self.pressed == False:
                 self.pressed = True
-                if self.selected[0]: #if selected
-                    if [self.pos[0] - 2, self.pos[1] - 1] in self.movable or [self.pos[0] - 2, self.pos[1] - 1] in self.attackable: #move
-                        self.move(inmap(self.selected[1:3]), inmap(self.pos))
-                        self.reset_select()
-                    else: #reset select
-                        self.reset_select()
-                elif isin(self.pos[0], 1, 10) and isin(self.pos[1], 0, 9):
-                    if self.board[self.pos[0] - 2][self.pos[1] - 1][0] == self.turn:
-                        self.selected = [True, self.pos[0], self.pos[1]]
-                        self.move_calculation()
+                if self.promotion[1] != -1: #promotion on
+                    if self.promotion[1] == 0: a, b, c = 1, 5, 1
+                    else: a, b, c = 3, 7, 2
+                    if self.pos[0] - 2 == self.promotion[0] and self.pos[1] - 1 in range(a, b):
+                        self.board[self.promotion[0]][self.promotion[1]] = [c, self.pos[1] - a]
+                        self.promotion[1] = -1
+                        self.turn = 2 if self.turn == 1 else 1
+                else:
+                    if self.selected[0]: #if selected
+                        if inmap(self.pos) in self.movable or inmap(self.pos) in self.attackable: #move
+                            self.move(inmap(self.selected[1:3]), inmap(self.pos))
+                            self.reset_select()
+                        else: #reset select
+                            self.reset_select()
+                    elif isin(self.pos[0], 1, 10) and isin(self.pos[1], 0, 9):
+                        if self.board[self.pos[0] - 2][self.pos[1] - 1][0] == self.turn:
+                            self.selected = [True, self.pos[0], self.pos[1]]
+                            self.move_calculation()
         else:
             self.pressed = False
 
@@ -116,6 +125,19 @@ class game:
         #Draw Selected Board
         if self.selected[0] == True:
             pg.draw.rect(self.screen, GREEN, [self.selected[1]*100, self.selected[2]*100, 100, 100], 5)
+
+        #Draw Promotion Select Box
+        if self.promotion[1] != -1:
+            if self.promotion[1] == 0:
+                pg.draw.rect(self.screen, WHITE, [(self.promotion[0] + 2)*100, (self.promotion[1] + 2)*100, 100, 400])
+                pg.draw.rect(self.screen, BLACK, [(self.promotion[0] + 2)*100, (self.promotion[1] + 2)*100, 100, 400], 5)
+                for i in range(1, 5):
+                    self.screen.blit(self.pieces[0][i], [(self.promotion[0] + 2)*100, (i + 1)*100])
+            else:
+                pg.draw.rect(self.screen, WHITE, [(self.promotion[0] + 2)*100, (self.promotion[1] - 3)*100, 100, 400])
+                pg.draw.rect(self.screen, BLACK, [(self.promotion[0] + 2)*100, (self.promotion[1] - 3)*100, 100, 400], 5)
+                for i in range(1, 5):
+                    self.screen.blit(self.pieces[1][i], [(self.promotion[0] + 2)*100, (i + 3)*100])
         
 
     def move_calculation(self):
@@ -150,6 +172,7 @@ class game:
                 if isin(pos[0] + i, -1, 8):
                     if self.board[pos[0] + i][pos[1] + direction][0] == enemy:
                         self.attackable.append([pos[0] + i, pos[1] + direction])
+            
 
         else:
             if piece != 3: #Queen, Rook Straight
@@ -182,20 +205,24 @@ class game:
                             break
     
     def move(self, org, des):
-        print(self.board[des[0]][des[1]])
         enemy = 2 if self.turn == 1 else 1
         if self.board[des[0]][des[1]][0] == enemy:
             self.dead_piece[self.board[des[0]][des[1]][0] - 1].append(self.board[des[0]][des[1]])
         self.board[des[0]][des[1]] = self.board[org[0]][org[1]]
         self.board[org[0]][org[1]] = [0, 0]
-        self.turn = 2 if self.turn == 1 else 1
-        print(self.dead_piece)
+
+        piece = self.board[des[0]][des[1]] #Pawn promotion
+        if (piece[0] == 1 and piece[1] == 5 and des[1] == 0) or (piece[0] == 2 and piece[1] == 5 and des[1] == 7):
+            self.promotion = des
+            print(self.promotion)
+        else:
+            self.turn = 2 if self.turn == 1 else 1
+
 
     def reset_select(self):
         self.selected[0] = False
         self.movable = []
         self.attackable = []
-
 
 g = game()
 while g.running:
