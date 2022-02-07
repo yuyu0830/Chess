@@ -46,7 +46,6 @@ class game:
         self.pressed = False
         self.board = [[[0, 0]]*8 for _ in range (8)] #color, pieces, x, y
         self.turn = 1 #1 = White, 2 = Black
-        self.kings_pos = [[4, 7], [4, 0]]
         self.movable = []
         self.attackable = []
         self.attacked = []
@@ -89,7 +88,7 @@ class game:
                     elif isin(self.pos[0], 1, 10) and isin(self.pos[1], 0, 9):
                         if self.board[self.pos[0] - 2][self.pos[1] - 1][0] == self.turn:
                             self.selected = [True, self.pos[0], self.pos[1]]
-                            result = self.move_calculation(inmap([self.pos[0], self.pos[1]]), 2 if self.turn == 1 else 1)
+                            result = self.move_calculation(inmap([self.pos[0], self.pos[1]]))
                             for i in result[0]:
                                 self.movable.append(i)
                             for i in result[1]:
@@ -110,18 +109,12 @@ class game:
                     pg.draw.rect(self.screen, GRAY, [i*100, j*100, 100, 100])
         pg.draw.rect(self.screen, RED, [0, 900 if self.turn == 1 else 0, 1200, 100])
 
-        #Check
-        for i in range(2):
-            if self.kings_pos[i] in self.attacked:
-                pg.draw.rect(self.screen, RED, [(self.kings_pos[i][0] + 2) * 100, (self.kings_pos[i][1] + 1) * 100, 100, 100])
         #Draw Piece
         for x in range(8):
             for y in range(8):
                 temp = self.board[x][y]
                 if temp[0] != 0:
                     self.screen.blit(self.pieces[temp[0] - 1][temp[1]], [(x + 2)*100, (y + 1)*100])
-
-
         if self.moving: #When Moving Phase
             x = ((self.moving_piece[1][0] + 2) * 100) + (((self.moving_piece[2][0] - self.moving_piece[1][0]) * 10) * (FRAME // 5 - self.moving))
             y = ((self.moving_piece[1][1] + 1) * 100) + (((self.moving_piece[2][1] - self.moving_piece[1][1]) * 10) * (FRAME // 5 - self.moving))
@@ -129,8 +122,6 @@ class game:
             self.moving -= 1
             if self.moving == 0:
                 self.board[self.moving_piece[2][0]][self.moving_piece[2][1]] = self.moving_piece[0]
-                self.attacked_board() #Caculate Attacked Board
-                
         else: #When Not Moving Phase
             #Draw Mouse Location
             if self.promotion[1] == -1 and isin(self.pos[0], 1, 10) and isin(self.pos[1], 0, 9) and not self.moving:
@@ -157,11 +148,9 @@ class game:
                 for i in range(1, 5):
                     self.screen.blit(self.pieces[0][i], [(self.promotion[0] + 2)*100, (i + b)*100])
 
-            for i in self.attacked:
-                pg.draw.rect(self.screen, GREEN, [(i[0] + 2) * 100, (i[1] + 1) * 100, 100, 100], 3)
-
-    def move_calculation(self, pos, enemy):
+    def move_calculation(self, pos):
         piece = self.board[pos[0]][pos[1]][1]
+        enemy = 2 if self.turn == 1 else 1
         result = [[], []]
         if piece == 0: #king
             for i in range(-1, 2):
@@ -224,7 +213,6 @@ class game:
         return result
     
     def update(self):
-        self.attacked = []
         pg.draw.rect(self.screen, BLACK, [200, 0, 1000, 100])
         pg.draw.rect(self.screen, BLACK, [0, 0, 200, 902.5])
         pg.draw.rect(self.screen, WHITE, [0, 900, 1000, 100])
@@ -234,18 +222,6 @@ class game:
         for pieces in self.dead_piece:
             for idx, v in enumerate(pieces):
                 self.screen.blit(self.pieces[v[0] - 1][v[1]], [0 if v[0] == 2 else 1000, 100 + (idx * 100)])
-
-    def attacked_board(self):
-        enemy = 2 if self.turn == 1 else 1
-        for x in range(8):
-            for y in range(8):
-                if self.board[x][y][0] == self.turn:
-                    result = self.move_calculation([x, y], enemy)
-                    for i in result:
-                        for j in i:
-                            if j not in self.attacked:
-                                self.attacked.append(j)
-                    
 
     def move(self, org, des):
         enemy = 2 if self.turn == 1 else 1
